@@ -175,6 +175,26 @@ log(`[${id}] [mterp] ${JSON.stringify(ctx)}`);
 
 ---
 
+还有一个问题，需要确定`thread`中`managed_stack`的偏移
+
+但是`managed_stack`在`Thread`中的偏移就比较麻烦了，主要是因为`Thread`比较复杂
+
+经过一番查阅后，发现在`art::StackVisitor::WalkStack`里面有调用`GetManagedStack()`
+
+- `void art::StackVisitor::WalkStack<(art::StackVisitor::CountTransitions)0>(bool)`
+
+![](./images/Snipaste_2022-05-21_21-24-24.png)
+
+并且这个函数的符号还在，于是结合源代码，和IDA对比便能知道`GetManagedStack()`实际的偏移
+
+注意这个偏移每个版本、手机的可能都不同，比如我这里是`184`也就是`0xB8`
+
+![](./images/Snipaste_2022-05-21_21-25-51.png)
+
+确定偏移之后记得修改`get_shadow_frame_ptr_by_thread_ptr`里面计算`managed_stack`的偏移
+
+---
+
 注意，由于hook指令详细情况的位置里入口可能太近，除了上面的测试过程，其他时候
 
 - 使用了 trace_interpreter_switch 则 hook_switch 应当为 false
