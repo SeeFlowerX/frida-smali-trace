@@ -36,21 +36,31 @@ npm install
 npm run watch
 ```
 
+如果只是简单使用，那么后面都不用管
+
+---
+
 在正式使用此脚本之前，需要先找到关键位置，以及几个关键寄存器
 
-1. 从手机中提取libart.so
+从手机中提取libart.so
 
 ```bash
 adb pull /apex/com.android.art/lib64/libart.so
 ```
 
-2. 用IDA打开libart.so，让IDA反汇编
+用IDA打开libart.so，让IDA反汇编
 
-3. 开启frida-server，运行命令注入脚本，具体APP请自行选择
+将`index.ts`中的`hook_mterp`改为`false`
+
+在`trace_interpreter_enrty`的`ExecuteSwitchImplCpp`日志打印中添加`${offset}`
+
+![](./images/Snipaste_2022-05-21_23-50-43.png)
+
+开启frida-server，运行命令注入脚本，具体APP请自行选择
 
 ![](./images/Snipaste_2022-05-21_22-26-07.png)
 
-随便滑动、点击下APP，脚本默认会给出一个偏移位置，比如我这里是`0x169d48`
+随便滑动、点击下APP，脚本会给出一个偏移位置，比如我这里是`0x169d48`
 
 IDA中按`G`，`粘贴`地址，`回车`跳转，就会进入到其中一个`ExecuteSwitchImplCpp`实现
 
