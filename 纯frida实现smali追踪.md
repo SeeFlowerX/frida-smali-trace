@@ -13,7 +13,7 @@
 
 本文是结合脱壳王课程中的【使用frida调试ART下的解释器】详细实践
 
-目标是以尽可能通用的手段实现对smali执行记录，无需修改ROM，也不用强制APP运行在switch解释模式下
+目标是以尽可能通用的手段实现对smali执行记录，无需修改ROM，也不用强制APP运行在switch模式下
 
 ---
 
@@ -170,6 +170,7 @@ inst->DumpString(shadow_frame.GetMethod()->GetDexFile())
 `DumpString`函数符号`_ZNK3art11Instruction10DumpStringEPKNS_7DexFileE`，位于`libdexfile.so`
 
 Q: 假设拿到了`shadow_frame`，那`shadow_frame.GetMethod()`该如何写呢？
+
 A: C/C++中这种访问私有成员的操作，在编译后会变成通过偏移取值，所以要分析对应的偏移是多少。
 
 - http://aosp.opersys.com/xref/android-11.0.0_r47/xref/art/runtime/interpreter/shadow_frame.h#426
@@ -627,6 +628,7 @@ function get_shadow_frame_ptr_by_thread_ptr(thread_ptr: NativePointer) : ShadowF
 ```
 
 Q: 那么thread就一定能从寄存器获取到吗？
+
 A: 经过验证，确实有一个寄存器在任何opcode操作位置执行的时候，其值为`thread`
 
 我这里确定这个寄存器是`x22`，于是编写具体的hook代码如下
