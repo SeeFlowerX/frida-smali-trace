@@ -134,6 +134,50 @@ function trace_interpreter_mterp_op(libart: Module, thread_reg: string, inst_reg
     log(`[mterp_op] op_count ${op_count}`);
 }
 
+function find_managed_stack_offset(libart: Module) {
+    // 特征
+    // 会将某个寄存器偏移一个 pointer 取值到另一个寄存器
+    // 被赋值的寄存器会通过 add 指令加上一个偏移得到 managed_stack
+    // 这个地方的偏移就是需要的
+    let managed_stack_offset: number = -1;
+    let thread_reg: any = null;
+    let symbols = libart.enumerateSymbols();
+    for (let index = 0; index < symbols.length; index++) {
+        let symbol = symbols[index];
+        // void art::StackVisitor::WalkStack<(art::StackVisitor::CountTransitions)0>(bool)
+        if (symbol.name != "_ZN3art12StackVisitor9WalkStackILNS0_16CountTransitionsE0EEEvb") continue;
+        let address = symbol.address;
+        for (let index = 0; index < 30; index++) {
+            if (managed_stack_offset != -1) break;
+            let ins = Instruction.parse(address);
+            if (ins.mnemonic == "b") break;
+            let ins_str = ins.toString();
+            // log(`ins_str => ${ins_str}`);
+            if (thread_reg == null){
+                let thread_reg_re = new RegExp(`ldr (\\w\\d+), \\[\\w\\d+, #${Process.pointerSize}\\]`, "g");;
+                // 32 ldr r0, [r4, #4]
+                // 64 ldr x8, [x0, #8]
+                let results = thread_reg_re.exec(ins_str);
+                if (results != null) {
+                    thread_reg = results[1];
+                    log(`[WalkStack] find thread_reg => ${thread_reg}`);
+                }
+            } else {
+                let managed_stack_offset_re = new RegExp(`add.+?, ${thread_reg}, #(.+)`, "g");
+                // 32 add.w sb, r0, #0xac
+                // 64 add x23, x8, #0xb8
+                let results = managed_stack_offset_re.exec(ins_str);
+                if (results != null){
+                    managed_stack_offset = Number(results[1]);
+                    log(`[WalkStack] find managed_stack_offset => ${managed_stack_offset}`);
+                }
+            }
+            address = ins.next;
+        }
+    }
+    return managed_stack_offset;
+}
+
 function get_shadow_frame_ptr_by_thread_ptr(thread_ptr: NativePointer) : ShadowFrame {
     // 0xB8 是 managed_stack 在 Thread 中的偏移 需要结合IDA分析
     // 如何定位这个偏移
